@@ -1,5 +1,10 @@
-const sanDiego = $("#_x30_73_San_Diego");
+$("path").on("click", displayCounty);
+$("polyline").on("click", displayCounty);
+$("polygon").on("click", displayCounty);
 
-sanDiego.on("click", function(e){
-    console.log("clicked!");
-})
+
+function displayCounty(e) {
+
+    const countyName = $(this).attr("id").replace(/_/g, " ").replace("1", "");
+    console.log(countyName);
+}
