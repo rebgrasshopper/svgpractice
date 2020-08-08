@@ -1,3 +1,27 @@
-path:hover , polyline:hover, polygon:hover {
-    fill: orange;
+.hover:hover {
+ fill: orange;
 }
+
+svg {
+    display: block;
+    position: relative;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  #map-holder {
+    border: 3px solid teal;
+    border-radius: 10px;
+    padding: 20px;
+  }
+
+  #loading {
+    width: 100px;
+    display: block;
+    position: absolute;
+    bottom: 50%;
+    right: 50%;
+    z-index: 100;
+  }
