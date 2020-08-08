@@ -16,17 +16,32 @@ $.ajax({
 //display function for ajax query of Covid data
 function displayCounty(e) {
 
+    //locate info
     const countyName = $(this).attr("id").replace(/_/g, " ").replace("1", "");
     console.log(countyName);
-    findCounty(countyName);
+    const countyData = findCounty(countyName);
+    console.log(countyData);
+    
+    //display info
+    const info = $("#info");
+    info.empty();
+    info.css("display", "block");
+    
+    const name = $(`<h5>${countyData.county_name} County</h5>`);
+    info.append(name);
+    info.append($("<hr>"));
+
+    const confirmed = $(`<p>Confirmed cases: ${countyData.confirmed}</p>`);
+    info.append(confirmed);
+
+    const fatality = $(`<p>Fatality rate: ${countyData.fatality_rate}</p>`);
+    info.append(fatality);
 }
 
 //search queryData.message for a particular county
 function findCounty(needle) {
-    console.log("FC: begin");
     for (let item of queryData.message) {
         if (item.county_name === needle) {
-            console.log(item);
             return item
         }
     }
