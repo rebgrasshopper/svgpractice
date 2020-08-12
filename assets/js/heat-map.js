@@ -1,5 +1,6 @@
 "use strict"
 
+
 const californiaCounties = [
     { "name": "Alameda", "censusCode": "001", "population": "" },
     { "name": "Alpine", "censusCode": "003", "population": "" },
@@ -60,6 +61,8 @@ const californiaCounties = [
     { "name": "Yolo", "censusCode": "113", "population": "" },
     { "name": "Yuba", "censusCode": "115", "population": "" },
 ]
+
+const timeLapseMap = []
 let wholeData;
 
 
@@ -93,26 +96,12 @@ $.ajax({
     getReady();
     wholeData = response;
 
-    for (let county of californiaCounties) {
-        console.log(county.name);
-        let recentIndex = findMostRecent(response, county.name)
-        console.log(`Recent Index: ${recentIndex}`);
+    setTimeLapseMap(response);
+    setMainMap(response);
 
-        let totalNewCases = setLast14(response, recentIndex);
-        console.log(`14 day cases: ${totalNewCases}`);
-        county.recentCases = totalNewCases;
 
-        let ratePer = calculateRate(totalNewCases, county.population);
-        console.log(`Rate per 100,000: ${ratePer.toFixed(0)}`);
-        county.infectionRate = ratePer;
-
-        let fatalityRate = parseInt(response[recentIndex].totalcountdeaths)/parseInt(response[recentIndex].totalcountconfirmed) * 100;
-        county.fatalityRate = fatalityRate;
-
-        let newClass = findRateGroup(ratePer);
-        $(`#${county.name.replace(/\s/g, "_")}`).addClass(newClass);
-    }
-})
+}
+)
 
 
 
@@ -122,43 +111,13 @@ $.ajax({
 
 //FUNCTIONS
 
-//remove loading gif when ajax query is returned
-function getReady() {
-    $("#loading").css("display", "none");
-
-    $("path").on("click", displayCounty);
-    $("polyline").on("click", displayCounty);
-    $("polygon").on("click", displayCounty);
-
-    $("path").addClass("hover");
-    $("polyline").addClass("hover");
-    $("polygon").addClass("hover");
-}
 
 
+//CALCULATION FUNCTIONS
 
 //calculate rate of incidence per 100,000 population
 function calculateRate(incidence, population) {
     return (parseInt(incidence) / parseInt(population)) * 100000;
-}
-
-
-//find index of most recent data from covid county data query
-function findMostRecent(dataset, countyName) {
-    let index = -1;
-    let turns = 0;
-
-    while (index < 0 && turns < 4) {
-        for (let i = 0; i < dataset.length; i++) {
-            if (dataset[i].date === moment().subtract(turns, "days").format("YYYY-MM-DD") && dataset[i].county === countyName) {
-                console.log(moment().subtract(turns, "days").format("YYYY-MM-DD"));
-                index = i;
-                return index;
-            }
-        }
-        turns++;
-        console.log("");
-    }
 }
 
 //return total of all new cases in the last two weeks
@@ -166,55 +125,46 @@ function setLast14(dataset, indexNum) {
     let total = 0;
     let index = indexNum;
     for (let i = 0; i < 14; i++) {
-        // console.log(`total = ${total} + ${parseInt(dataset[index].newcountconfirmed)}`);
         if (dataset[index].newcountconfirmed) {
             total += parseInt(dataset[index].newcountconfirmed);
         }
 
-        // console.log(`New total = ${total}`);
         index--;
-        // console.log(i);
+    }
+    return total;
+}
+
+//return total of all new cases in the last two weeks
+function setNext14(dataset, indexNum) {
+    let total = 0;
+    let index = indexNum;
+    for (let i = 0; i < 14; i++) {
+        if (dataset[index]){
+        if (dataset[index].newcountconfirmed) {
+            total += parseInt(dataset[index].newcountconfirmed);
+        }
+    }
+        index++;
     }
     return total;
 }
 
 
-//find class for heat map color
-function findRateGroup(number) {
-    if (number <= 1) {
-        return "r1";
-    } else if (number <= 5) {
-        return "r5";
-    } else if (number <= 15) {
-        return "r15";
-    } else if (number <= 30) {
-        return "r30";
-    } else if (number <= 50) {
-        return "r50";
-    } else if (number <= 100) {
-        return "r100";
-    } else if (number <= 150) {
-        return "r150";
-    } else if (number <= 200) {
-        return "r200";
-    } else if (number <=500) {
-        return "r500";
-    } else {
-        return "rMore";
-    }
-}
 
+//DISPLAY FUNCTIONS
 
-//get county code from californiaCountyIDs, and find the matching population data from Census API response
-function locateCountyPopulation(dataset) {
-    for (let county of californiaCounties) {
-        console.log(county.name);
-        for (let array of dataset) {
-            if (county.censusCode === array[2]) {
-                county.population = array[0];
-            }
-        }
-    }
+//remove loading gif when ajax query is returned
+function getReady() {
+    $("#loading").css("display", "none");
+
+    $("path").on("click", displayCounty);
+    $("polyline").on("click", displayCounty);
+    $("polygon").on("click", displayCounty);
+    $("#play").on("click", runTimeLapse);
+
+    $("path").addClass("hover");
+    $("polyline").addClass("hover");
+    $("polygon").addClass("hover");
 }
 
 //display county info on click
@@ -223,35 +173,121 @@ function displayCounty(e){
     const info = $("#info");
     info.empty();
     info.css("display", "block");
-
+    
     const countyName = $(this).attr("id").replace(/_/g, " ");
-    console.log(countyName);
-
+    
     const thisCounty = findCounty(countyName);
-    console.log(thisCounty);
-
+    
     const countyHeader = $(`<h5>${thisCounty.name} County</h5>`);
     info.append(countyHeader);
     info.append($("<hr>"))
-
+    
     const countyRecent = $(`<p><strong>Cases in last 14 days: </strong>${thisCounty.recentCases}</p>`);
     info.append(countyRecent);
-
+    
     const countyInfectionRate = $(`<p><strong>Infections/100,000: </strong>${thisCounty.infectionRate.toFixed(1)}</p>`);
     info.append(countyInfectionRate);
     
     const infectionInfo = $("<p class='fine-print'>Infection rate calculated by new cases in past 14 days over total population, times 100,000</p>")
     info.append(infectionInfo);
-
+    
     const countyFatalityRate = $(`<p><strong>Fatality rate: </strong>${thisCounty.fatalityRate.toFixed(1)}%</p>`);
     info.append(countyFatalityRate);
     
     const fatalityInfo = $("<p class='fine-print'>Fatality rate calculated by total deaths over total cases, times 100</p>");
     info.append(fatalityInfo);
-
-
+    
+    
 }
 
+function setTimeLapseMap(response){
+    
+    let howManyCounties = 0;
+    for (let county of californiaCounties) {
+
+        const newArray = [];
+
+
+        length = findMostRecent(response, county.name) - findFirst(response, county.name);
+        
+        
+        let addToIndex = 0;
+
+        for (let i = 0; i < length/14; i++) {
+            const newObject = {};
+            newObject.name = county.name;
+
+
+            let recentIndex = findFirst(response, county.name)
+            newObject.firstIndex = recentIndex;
+
+            let totalNewCases = setNext14(response, recentIndex + addToIndex);
+            newObject.recentCases = totalNewCases;
+
+            let ratePer = calculateRate(totalNewCases, county.population);
+            newObject.infectionRate = ratePer;
+
+            let fatalityRate = parseInt(response[recentIndex].totalcountdeaths)/parseInt(response[recentIndex].totalcountconfirmed) * 100;
+            newObject.fatalityRate = fatalityRate;
+
+            newObject.color = findRateGroup(ratePer, county.name);
+
+            addToIndex += 14;
+            newArray.push(newObject);
+        }
+        timeLapseMap.push(newArray);
+    }
+}
+
+function setMainMap(response){
+    for (let county of californiaCounties) {
+        let recentIndex = findMostRecent(response, county.name)
+
+        let totalNewCases = setLast14(response, recentIndex);
+        county.recentCases = totalNewCases;
+
+        let ratePer = calculateRate(totalNewCases, county.population);
+        county.infectionRate = ratePer;
+
+        let fatalityRate = parseInt(response[recentIndex].totalcountdeaths)/parseInt(response[recentIndex].totalcountconfirmed) * 100;
+        county.fatalityRate = fatalityRate;
+
+        findRateGroup(ratePer, county.name);
+    }
+}
+
+function runTimeLapse(response){
+    let data = response;
+    let i = 0;
+    const timeLapse = setInterval(function(data){
+
+        for (let k=0;k<timeLapseMap.length;k++){
+            findRateGroup(timeLapseMap[k][i].infectionRate, timeLapseMap[k][i].name);
+        }
+
+
+
+        i++;
+        if (i>=timeLapseMap[0].length-2){ //-2 because the last section of timeLapseMap may not contain a full 14 days, so it's prefereable to use MainMap, which relies on the most recent 14 days data
+            clearInterval(timeLapse)
+            setMainMap(wholeData);
+        }
+    }, 2000)
+}
+
+
+
+//LOCATION FUNCTIONS
+
+//find index of most recent data from covid county data query
+function findMostRecent(dataset, countyName) {
+    return dataset.map(el => el.county).lastIndexOf(countyName);    
+}
+
+//find index of earliest data from covid county data query
+function findFirst(dataset, countyName) {
+    return dataset.map(el => el.county).indexOf(countyName);    
+}
 
 //search queryData.message for a particular county
 function findCounty(needle) {
@@ -260,4 +296,46 @@ function findCounty(needle) {
             return item
         }
     }
-  };
+};
+
+//find class for heat map color
+function findRateGroup(number, countyName) {
+    let rate;
+    if (number <= 1) {
+        rate = "r1";
+    } else if (number <= 5) {
+        rate = "r5";
+    } else if (number <= 15) {
+        rate = "r15";
+    } else if (number <= 30) {
+        rate = "r30";
+    } else if (number <= 50) {
+        rate = "r50";
+    } else if (number <= 100) {
+        rate = "r100";
+    } else if (number <= 150) {
+        rate = "r150";
+    } else if (number <= 200) {
+        rate = "r200";
+    } else if (number <=500) {
+        rate = "r500";
+    } else {
+        rate = "rMore";
+    }
+    $(`#${countyName.replace(/\s/g, "_")}`).removeClass();
+    $(`#${countyName.replace(/\s/g, "_")}`).addClass("hover");
+    $(`#${countyName.replace(/\s/g, "_")}`).addClass(rate);
+}
+
+//get county code from californiaCountyIDs, and find the matching population data from Census API response
+function locateCountyPopulation(dataset) {
+    for (let county of californiaCounties) {
+        for (let array of dataset) {
+            if (county.censusCode === array[2]) {
+                county.population = array[0];
+            }
+        }
+    }
+}
+
+

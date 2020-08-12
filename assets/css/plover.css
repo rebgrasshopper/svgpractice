@@ -108,7 +108,17 @@ p {
   right: 0px;
 }
 
+#buttonRow {
+  margin-bottom: 10px;
+}
 
+#play {
+  border: none;
+  background-color: rgb(87, 154, 255);
+  padding: 8px;
+  border-radius: 3px;
+  z-index: 1000;
+}
 
 
 
